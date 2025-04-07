@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capture Hand Sign</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --accent-color: #e74c3c;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        header {
+            background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            background-color: #000;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 640px;
+        }
+        
+        .input-group {
+            display: flex;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        #label {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px 0 0 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #label:focus {
+            border-color: var(--primary-color);
+        }
+        
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            min-width: 150px;
+            text-align: center;
+        }
+        
+        .btn-start {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-start:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-stop {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .btn-stop:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-back {
+            background-color: var(--dark-color);
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        .btn-back:hover {
+            background-color: #1a252f;
+        }
+        
+        .status-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 640px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        
+        #status {
+            text-align: center;
+            margin-top: 8px;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .instructions {
+            background-color: rgba(44, 62, 80, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 640px;
+        }
+        
+        .instructions h3 {
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .btn-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+    <script defer>
+        let video = null;
+        let labelInput = null;
+        let capturing = false;
+        let canvas = null;
+        let context = null;
+        let captureInterval = null;
+        let counter = 0;
+        const saveLimit = 100;
+        
+        window.onload = function () {
+            video = document.getElementById('video');
+            labelInput = document.getElementById('label');
+            canvas = document.createElement('canvas');
+            context = canvas.getContext('2d');
+            
+            // Add event listener for enter key on input
+            labelInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    startCapture();
+                }
+            });
+            
+            // Setup progress bar
+            updateProgressBar(0);
+        };
+        
+        function startCapture() {
+            if (!labelInput.value.trim()) {
+                showAlert("Please enter a sign label first!");
+                return;
+            }
+            
+            if (capturing) return;
+            
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = false;
+            
+            capturing = true;
+            counter = 0;
+            updateProgressBar(0);
+            
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                    captureInterval = setInterval(captureFrame, 1000);  // Capture every second
+                    document.getElementById('capture-status').innerText = "Capturing...";
+                })
+                .catch(error => {
+                    console.error(error);
+                    showAlert("Could not access camera. Please check permissions.");
+                    resetCapture();
+                });
+        }
+        
+        function stopCapture() {
+            if (!capturing) return;
+            
+            capturing = false;
+            clearInterval(captureInterval);
+            
+            let stream = video.srcObject;
+            if (stream) {
+                let tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+            
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            document.getElementById('capture-status').innerText = "Capture stopped";
+        }
+        
+        function resetCapture() {
+            stopCapture();
+            counter = 0;
+            updateProgressBar(0);
+        }
+        
+        function captureFrame() {
+            if (!capturing || counter >= saveLimit) {
+                stopCapture();
+                if (counter >= saveLimit) {
+                    showAlert("Capture limit reached!");
+                    document.getElementById('capture-status').innerText = "Completed!";
+                }
+                return;
+            }
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            let imageData = canvas.toDataURL('image/jpeg');
+            uploadImage(imageData);
+            
+            // Flash effect
+            document.querySelector('.video-container').classList.add('flash');
+            setTimeout(() => {
+                document.querySelector('.video-container').classList.remove('flash');
+            }, 200);
+        }
+        
+        function uploadImage(imageData) {
+            fetch('/capture_sign', {
+                method: 'POST',
+                body: JSON.stringify({ label: labelInput.value, image: imageData }),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                counter = data.count;
+                updateProgressBar(counter);
+            })
+            .catch(error => {
+                console.error("Error uploading image:", error);
+                showAlert("Error saving image. Please try again.");
+            });
+        }
+        
+        function updateProgressBar(count) {
+            const percentage = Math.min((count / saveLimit) * 100, 100);
+            document.querySelector('.progress-bar').style.width = percentage + '%';
+            document.getElementById('status').innerText = `Captured: ${count}/${saveLimit}`;
+        }
+        
+        function showAlert(message) {
+            const alertBox = document.createElement('div');
+            alertBox.className = 'alert-box';
+            alertBox.innerHTML = `
+                <div class="alert-content">
+                    <p>${message}</p>
+                    <button onclick="this.parentElement.parentElement.remove()">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertBox);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (document.body.contains(alertBox)) {
+                    alertBox.remove();
+                }
+            }, 3000);
+        }
+    </script>
+    <style>
+        .alert-box {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .alert-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .alert-content p {
+            margin-bottom: 15px;
+        }
+        
+        .alert-content button {
+            padding: 8px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .flash {
+            animation: flash-animation 0.2s;
+        }
+        
+        @keyframes flash-animation {
+            0% { background-color: transparent; }
+            50% { background-color: rgba(255, 255, 255, 0.3); }
+            100% { background-color: transparent; }
+        }
+        
+        .capture-status {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>Capture Hand Signs</h2>
+            <p class="subtitle">Create your sign language dataset</p>
+        </header>
+        
+        <div class="video-container">
+            <div class="controls">
+                <div class="input-group">
+                    <input type="text" id="label" placeholder="Enter sign label (e.g., Hello, Thank You, Yes)">
+                </div>
+                
+                <div class="btn-group">
+                    <button id="start-btn" class="btn btn-start" onclick="startCapture()">Start Capture</button>
+                    <button id="stop-btn" class="btn btn-stop" onclick="stopCapture()" disabled>Stop Capture</button>
+                </div>
+            </div>
+            
+            <video id="video" autoplay playsinline></video>
+            <p id="capture-status" class="capture-status">Ready to capture</p>
+            
+            <div class="status-container">
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <p id="status">Captured: 0/100</p>
+            </div>
+            
+            <div class="instructions">
+                <h3>Instructions:</h3>
+                <ol>
+                    <li>Enter a descriptive label for the sign you want to capture</li>
+                    <li>Click "Start Capture" and position your hand in the camera view</li>
+                    <li>Hold each sign position steady while capturing</li>
+                    <li>Images will be captured automatically every second</li>
+                    <li>Click "Stop Capture" when finished or wait until 100 images are captured</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    
+    <a href="/" class="btn btn-back">Back to Home</a>
+</body>
+</html>

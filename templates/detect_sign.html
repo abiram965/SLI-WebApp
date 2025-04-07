@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Detection</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --accent-color: #e74c3c;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        header {
+            background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .detection-area {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        #video {
+            width: 100%;
+            height: auto;
+            background-color: #000;
+            display: block;
+        }
+        
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-dot {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .prediction-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 640px;
+            margin-bottom: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .prediction-label {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        
+        #prediction {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--dark-color);
+            margin: 10px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .prediction-highlight {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid var(--secondary-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .confidence {
+            font-size: 1rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .history-container {
+            width: 100%;
+            max-width: 640px;
+            margin-top: 10px;
+        }
+        
+        .history-title {
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+        
+        .history-list {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 0;
+            gap: 10px;
+        }
+        
+        .history-item {
+            padding: 8px 15px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .info-box {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 640px;
+            border-radius: 8px;
+        }
+        
+        .info-box h3 {
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            padding-left: 20px;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+        }
+        
+        .btn-back {
+            background-color: var(--dark-color);
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            min-width: 150px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .btn-back:hover {
+            background-color: #1a252f;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-control {
+            background-color: white;
+            color: var(--dark-color);
+            border: 2px solid var(--dark-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-control:hover {
+            background-color: var(--dark-color);
+            color: white;
+        }
+        
+        .capturing::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            animation: capture-flash 0.15s ease-out;
+        }
+        
+        @keyframes capture-flash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            h2 {
+                font-size: 1.8rem;
+            }
+            
+            #prediction {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>Real-time Sign Language Detection</h2>
+            <p class="subtitle">Instantly translate hand gestures into text</p>
+        </header>
+        
+        <div class="detection-area">
+            <div class="video-container" role="region" aria-label="Video feed">
+                <video id="video" autoplay playsinline muted></video>
+                <div class="overlay">
+                    <div class="status-indicator">
+                        <div class="status-dot" aria-hidden="true"></div>
+                        <span id="status-text">Detecting</span>
+                    </div>
+                    <span id="fps" aria-live="polite">Processing: 0.5 FPS</span>
+                </div>
+            </div>
+            
+            <div class="prediction-container" role="region" aria-label="Prediction results">
+                <div class="prediction-label">DETECTED SIGN</div>
+                <div id="prediction" class="prediction-highlight" aria-live="polite">Waiting...</div>
+                <div id="confidence" class="confidence">Position your hand in the camera view</div>
+                
+                <div class="controls">
+                    <button id="pause-btn" class="btn-control" aria-label="Pause detection">Pause</button>
+                    <button id="speed-btn" class="btn-control" aria-label="Increase detection speed">Increase Speed</button>
+                </div>
+            </div>
+            
+            <div class="history-container" role="region" aria-label="Detection history">
+                <div class="history-title">Recent Detections:</div>
+                <div id="history-list" class="history-list" aria-live="polite">
+                    <!-- History items will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <h3>Tips for Better Detection:</h3>
+                <ul>
+                    <li>Make sure your hand is clearly visible in the frame</li>
+                    <li>Position yourself in good lighting</li>
+                    <li>Keep your hand steady when signing</li>
+                    <li>Maintain a neutral background if possible</li>
+                    <li>Try different distances from the camera if detection is poor</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <a href="/" class="btn-back" role="button">Back to Home</a>
+    
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const predictionText = document.getElementById('prediction');
+        const confidenceText = document.getElementById('confidence');
+        const historyList = document.getElementById('history-list');
+        const fpsDisplay = document.getElementById('fps');
+        const pauseBtn = document.getElementById('pause-btn');
+        const speedBtn = document.getElementById('speed-btn');
+        const statusText = document.getElementById('status-text');
+        
+        // Variables
+        let isPaused = false;
+        let detectionInterval = 2000; // 2 seconds default (0.5 FPS)
+        let intervalId = null;
+        let predictionHistory = [];
+        let lastPrediction = "";
+        let stream = null;
+        let isRunning = false;
+
+        // Event listeners
+        pauseBtn.addEventListener('click', togglePause);
+        speedBtn.addEventListener('click', toggleSpeed);
+        window.addEventListener('beforeunload', stopStream);
+
+        function startVideo() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                updateError("Camera Error", "WebRTC not supported in this browser");
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: "user"
+                }
+            })
+            .then(videoStream => {
+                stream = videoStream;
+                video.srcObject = stream;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play().catch(err => {
+                        updateError("Video Error", err.message);
+                    });
+                    if (!isRunning) {
+                        startDetection();
+                        isRunning = true;
+                    }
+                });
+            })
+            .catch(error => {
+                console.error("Camera access error:", error);
+                updateError("Camera Error", getCameraErrorMessage(error));
+            });
+        }
+
+        function getCameraErrorMessage(error) {
+            switch (error.name) {
+                case 'NotAllowedError':
+                    return "Camera access denied. Please allow camera permissions";
+                case 'NotFoundError':
+                    return "No camera detected on this device";
+                default:
+                    return error.message || "Unknown camera error";
+            }
+        }
+
+        function stopStream() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            isRunning = false;
+        }
+
+        function startDetection() {
+            if (intervalId) clearInterval(intervalId);
+            fpsDisplay.textContent = `Processing: ${(1000 / detectionInterval).toFixed(1)} FPS`;
+            intervalId = setInterval(sendFrame, detectionInterval);
+        }
+
+        function captureFrame() {
+            if (!video.videoWidth || !video.videoHeight) return null;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            try {
+                return canvas.toDataURL('image/jpeg', 0.9);
+            } catch (err) {
+                console.error("Error capturing frame:", err);
+                return null;
+            }
+        }
+
+        function sendFrame() {
+            if (isPaused || !isRunning) return;
+
+            const imageData = captureFrame();
+            if (!imageData) {
+                console.warn("Failed to capture frame");
+                return;
+            }
+
+            const videoContainer = document.querySelector('.video-container');
+            videoContainer.classList.add('capturing');
+            setTimeout(() => videoContainer.classList.remove('capturing'), 150);
+
+            fetch('/predict_sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    updateError("Error", data.error);
+                } else if (data.prediction) {
+                    updatePrediction(data.prediction, data.confidence || 0);
+                } else {
+                    updatePrediction("No Sign Detected", 0);
+                    confidenceText.textContent = "Try repositioning your hand";
+                }
+            })
+            .catch(error => {
+                console.error('Prediction error:', error);
+                updateError("Error", "Connection issue: " + error.message);
+            });
+        }
+
+        function updatePrediction(prediction, confidence) {
+            if (prediction !== lastPrediction) {
+                predictionText.style.opacity = 0;
+                setTimeout(() => {
+                    predictionText.textContent = prediction;
+                    predictionText.style.opacity = 1;
+                    confidenceText.textContent = `Confidence: ${(confidence * 100).toFixed(0)}%`;
+                    if (prediction !== "No Sign Detected" && 
+                        (predictionHistory.length === 0 || predictionHistory[predictionHistory.length - 1] !== prediction)) {
+                        predictionHistory.push(prediction);
+                        if (predictionHistory.length > 10) predictionHistory.shift();
+                        updateHistory();
+                    }
+                    lastPrediction = prediction;
+                }, 300);
+            }
+        }
+
+        function updateError(title, message) {
+            predictionText.textContent = title;
+            confidenceText.textContent = message;
+            predictionText.style.opacity = 1;
+        }
+
+        function updateHistory() {
+            historyList.innerHTML = '';
+            for (let i = predictionHistory.length - 1; i >= 0; i--) {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.textContent = predictionHistory[i];
+                historyList.appendChild(historyItem);
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? "Resume" : "Pause";
+            pauseBtn.setAttribute('aria-label', isPaused ? "Resume detection" : "Pause detection");
+            const statusDot = document.querySelector('.status-dot');
+            statusText.textContent = isPaused ? "Paused" : "Detecting";
+            statusDot.style.animationPlayState = isPaused ? 'paused' : 'running';
+        }
+
+        function toggleSpeed() {
+            if (detectionInterval === 2000) {
+                detectionInterval = 1000; // 1 FPS
+                speedBtn.textContent = "Maximum Speed";
+                speedBtn.setAttribute('aria-label', 'Set maximum detection speed');
+            } else if (detectionInterval === 1000) {
+                detectionInterval = 500;  // 2 FPS
+                speedBtn.textContent = "Decrease Speed";
+                speedBtn.setAttribute('aria-label', 'Decrease detection speed');
+            } else {
+                detectionInterval = 2000; // 0.5 FPS
+                speedBtn.textContent = "Increase Speed";
+                speedBtn.setAttribute('aria-label', 'Increase detection speed');
+            }
+            startDetection();
+        }
+
+        document.addEventListener('DOMContentLoaded', startVideo);
+    </script>
+</body>
+</html>
